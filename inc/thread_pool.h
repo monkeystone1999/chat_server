@@ -8,4 +8,5 @@ void *get_result(pool_context *ctx, int eventfd);
 int ctx_run(pool_context *ctx);
 int throw_work(pool_context *ctx, pthread_func func, void *arg);
 
+pool_context *create_pool_ctx(int poolSize);
 #endif

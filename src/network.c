@@ -1,4 +1,5 @@
 #include "../inc/network.h"
+#include "../inc/thread_pool.h"
 #include "../inc/user_service.h"
 #include <netinet/in.h>
 #include <sys/epoll.h>
@@ -44,6 +45,17 @@ void my_network() {
   int epfd = epoll_create1(0);
   epoll_ctl(epfd, EPOLL_CTL_ADD, sock_stream, &tcp_ep);
   epoll_ctl(epfd, EPOLL_CTL_ADD, sock_dgram, &udp_ep);
+  pool_context *ctx = create_pool_ctx(10);
+  struct epoll_event ev[100];
+  while (1) {
+    int on_events = epoll_wait(epfd, ev, 100, 0);
+    for (int i = 0; i < on_events; ++i) {
+      if (ev[i].data.fd == sock_stream) {
+        if ()
+      } else {
+      }
+    }
+  }
 }
 
 void networkFunc() {
