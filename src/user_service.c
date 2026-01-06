@@ -3,5 +3,4 @@
 struct user_info {
   int ip;
   int key;
-  int sock_fd;
 };

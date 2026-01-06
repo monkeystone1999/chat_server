@@ -12,4 +12,5 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 void networkFunc();
+void my_network();
 #endif

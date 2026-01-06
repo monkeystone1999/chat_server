@@ -1,6 +1,6 @@
 #include "../inc/server.h"
+#include "../inc/network.h"
 #include <dlfcn.h>
-
 void Server() {
   void *networkHandler = dlopen("/usr/lib", RTLD_LAZY),
        *packetHandler = dlopen("/usr/lib", RTLD_LAZY),
