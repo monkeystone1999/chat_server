@@ -8,7 +8,7 @@
 #include <unistd.h>
 typedef struct {
   void *arg;
-  pthread_func func;
+  thr_ptr_t func;
   int event_fd;
   bool working;
   void *result;
@@ -84,7 +84,7 @@ int check_working(pool_context *ctx) {
   return not_work_thread;
 }
 
-int throw_work(pool_context *ctx, pthread_func func, void *arg) {
+int throw_work(pool_context *ctx, thr_ptr_t func, void *arg) {
   int index = check_working(ctx);
   if (index == -1) {
     return -1;

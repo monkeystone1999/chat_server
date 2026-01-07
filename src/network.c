@@ -5,8 +5,12 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-static inline void networkStatus(int sock);
+#include <unistd.h>
 
+void *check_usr_crypt(void *);
+void *recv_msg(void *);
+void do_crypt(int sock);
+void accept_usr(int sock, struct sockaddr_in *client_addr);
 void my_network() {
   int sock_stream = socket(AF_INET, SOCK_STREAM, 0);
   int sock_dgram = socket(AF_INET, SOCK_DGRAM, 0);
@@ -51,63 +55,41 @@ void my_network() {
     int on_events = epoll_wait(epfd, ev, 100, 0);
     for (int i = 0; i < on_events; ++i) {
       if (ev[i].data.fd == sock_stream) {
-        if ()
+        throw_work(ctx, (thr_ptr_t)check_usr_crypt,
+                   (void *)sock_stream); /// check user and cryption
       } else {
+        throw_work(ctx, (thr_ptr_t)recv_msg,
+                   (void *)sock_dgram); /// msg on? or msg out
       }
     }
   }
 }
 
-void networkFunc() {
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock == -1) {
-    perror("socket make fail");
+/// tcp 로 들어왔으니 기존에 있는 접속을 했던 유저면 user 확인을
+/// 처음 접속을 한 유저면 키 교환을
+void *check_usr_crypt(void *sock_stream) {
+  int sock = (int)(intptr_t)sock_stream;
+  struct sockaddr_in client_addr;
+  memset(&client_addr.sin_zero, '\0', 8);
+  int sin_size = sizeof(struct sockaddr_in);
+  int client_sock = accept(sock, (struct sockaddr *)&client_addr, &sin_size);
+  if (client_sock == -1) {
+    perror("client sock wrong");
     exit(1);
   }
-  networkStatus(sock);
-  struct epoll_event ep;
-  ep.data.fd = sock;
-  ep.events = EPOLLIN;
-  int epfd = epoll_create1(0);
-  epoll_ctl(epfd, EPOLL_CTL_ADD, sock, &ep);
-  struct epoll_event events[100];
-  while (1) {
-    struct sockaddr_in client_addr;
-    memset(&client_addr.sin_zero, '\0', 8);
-    int on_events = epoll_wait(epfd, events, 100, 0);
-    for (int i = 9; i < on_events; ++i) {
-      if (events[i].data.fd == sock) {
-        int sin_size = sizeof(struct sockaddr_in);
-        int client_sock =
-            accept(sock, (struct sockaddr *)&client_addr, &sin_size);
-        if (client_sock == -1) {
-          perror("Fail to Accept");
-          exit(1);
-        }
-        int flag = fcntl(client_sock, F_GETFL, 0);
-        fcntl(client_sock, F_SETFL, flag | O_NONBLOCK);
-        struct epoll_event client_ev;
-        client_ev.events = EPOLLIN | EPOLLET;
-        client_ev.data.fd = client_sock;
-        epoll_ctl(epfd, EPOLL_CTL_ADD, sock, &client_ev);
-      }
+  //  char usr_ip[INET_ADDRSTRLEN];
+  if (find_ip(client_sock, &client_addr) == -1) {
+    do_crypt(client_sock);
+  } else {
+    if (find_usr(client_sock, &client_addr) == -1) {
+      close(client_sock);
+      return (void *)NULL;
     }
+    accept_usr(client_sock, &client_addr);
   }
+  close(client_sock);
+  return (void *)NULL;
 }
 
-void networkStatus(int sock) {
-  struct sockaddr_in Server;
-  memset(&Server.sin_zero, '\0', 8);
-  Server.sin_addr.s_addr = htonl(INADDR_ANY);
-  Server.sin_port = htons(60000);
-  Server.sin_family = AF_INET;
-  if (bind(sock, (struct sockaddr *)&Server, sizeof(struct sockaddr_in)) ==
-      -1) {
-    perror("Bind Fail");
-    exit(1);
-  }
-  if (listen(sock, 5) == -1) {
-    perror("Listen Fail");
-    exit(1);
-  }
-}
+/// 기존에 접속했던 유저인지 확인 후 복호화하여 채팅방 나머지에 메시지 뿌려주기
+void *recv_msg(void *sock) {}
