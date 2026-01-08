@@ -11,6 +11,7 @@ void *check_usr_crypt(void *);
 void *recv_msg(void *);
 void do_crypt(int sock);
 void accept_usr(int sock, struct sockaddr_in *client_addr);
+
 void my_network() {
   int sock_stream = socket(AF_INET, SOCK_STREAM, 0);
   int sock_dgram = socket(AF_INET, SOCK_DGRAM, 0);
@@ -85,7 +86,7 @@ void *check_usr_crypt(void *sock_stream) {
       close(client_sock);
       return (void *)NULL;
     }
-    accept_usr(client_sock, &client_addr);
+    accept_usr(client_sock, &client_addr); // tcp 연결 종료
   }
   close(client_sock);
   return (void *)NULL;
@@ -93,3 +94,6 @@ void *check_usr_crypt(void *sock_stream) {
 
 /// 기존에 접속했던 유저인지 확인 후 복호화하여 채팅방 나머지에 메시지 뿌려주기
 void *recv_msg(void *sock) {}
+
+/// 암호화 연결 및 키 교환
+void do_crypt(int sock) {}

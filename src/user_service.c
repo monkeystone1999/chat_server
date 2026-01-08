@@ -21,7 +21,7 @@ typedef struct {
 typedef struct {
   ip_info *ip;
   char usr_name[20];
-  bool state;
+  bool state; // == is_online
 } user_info;
 
 struct user_table {
