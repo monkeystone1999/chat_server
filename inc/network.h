@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <memory.h>
 #include <netinet/in.h>
+#include <openssl/ssl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,5 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-void networkFunc();
-void my_network();
+void networkFunc(SSL_CTX *ctx);
 #endif

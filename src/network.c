@@ -6,13 +6,14 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-
+SSL_CTX *server_ctx;
 void *check_usr_crypt(void *);
 void *recv_msg(void *);
-void do_crypt(int sock);
-void accept_usr(int sock, struct sockaddr_in *client_addr);
+void do_crypt(SSL *client_ctx);
+void accept_usr(SSL *client_ctx, struct sockaddr_in *client_addr);
 
-void my_network() {
+void NetworkFunc(SSL_CTX *ctx) {
+  server_ctx = ctx;
   int sock_stream = socket(AF_INET, SOCK_STREAM, 0);
   int sock_dgram = socket(AF_INET, SOCK_DGRAM, 0);
   if (sock_stream == -1 || sock_dgram == -1) {
@@ -50,16 +51,16 @@ void my_network() {
   int epfd = epoll_create1(0);
   epoll_ctl(epfd, EPOLL_CTL_ADD, sock_stream, &tcp_ep);
   epoll_ctl(epfd, EPOLL_CTL_ADD, sock_dgram, &udp_ep);
-  pool_context *ctx = create_pool_ctx(10);
+  pool_context *pool_ctx = create_pool_ctx(10);
   struct epoll_event ev[100];
   while (1) {
     int on_events = epoll_wait(epfd, ev, 100, 0);
     for (int i = 0; i < on_events; ++i) {
       if (ev[i].data.fd == sock_stream) {
-        throw_work(ctx, (thr_ptr_t)check_usr_crypt,
+        throw_work(pool_ctx, (thr_ptr_t)check_usr_crypt,
                    (void *)sock_stream); /// check user and cryption
       } else {
-        throw_work(ctx, (thr_ptr_t)recv_msg,
+        throw_work(pool_ctx, (thr_ptr_t)recv_msg,
                    (void *)sock_dgram); /// msg on? or msg out
       }
     }
@@ -78,16 +79,27 @@ void *check_usr_crypt(void *sock_stream) {
     perror("client sock wrong");
     exit(1);
   }
-  //  char usr_ip[INET_ADDRSTRLEN];
+  SSL *ssl_ctx;
+  // 처음 들어왔는지 확인
   if (find_ip(client_sock, &client_addr) == -1) {
-    do_crypt(client_sock);
+    // 처음 들어온거니 키 교환 ssl 연결로 진행
+    ssl_ctx = SSL_new(server_ctx);
+    SSL_set_fd(ssl_ctx, client_sock);
+    do_crypt(ssl_ctx);
   } else {
     if (find_usr(client_sock, &client_addr) == -1) {
+      // 무언가의 해킹일 가능성이 있음 ip 가 있는데 user 가 없다? 말이 안 됨
       close(client_sock);
       return (void *)NULL;
     }
-    accept_usr(client_sock, &client_addr); // tcp 연결 종료
+    // 키 교환도 했고 user 도 있음 비밀번호가 맞는지 확인해야함 ssl 로 연결
+    //
+    ssl_ctx = SSL_new(server_ctx);
+    SSL_set_fd(ssl_ctx, client_sock);
+    accept_usr(ssl_ctx, &client_addr); // tcp 연결 종료
   }
+  SSL_shutdown(ssl_ctx);
+  SSL_free(ssl_ctx);
   close(client_sock);
   return (void *)NULL;
 }
@@ -96,4 +108,11 @@ void *check_usr_crypt(void *sock_stream) {
 void *recv_msg(void *sock) {}
 
 /// 암호화 연결 및 키 교환
-void do_crypt(int sock) {}
+void do_crypt(SSL *ssl_ctx) {
+  if (SSL_accept(ssl_ctx) <= 0) {
+    perror("SSL accept Fail");
+    exit(1);
+  }
+}
+/// SSL 연결 후 암호화/비밀번호 확인 후
+void accept_usr(SSL *ssl_ctx, struct sockaddr_in *client_addr) {}

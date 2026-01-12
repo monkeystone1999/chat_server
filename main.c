@@ -1,4 +1,6 @@
 #include <dlfcn.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <stdlib.h>
 #include <unistd.h>
 /// 최종 목표 : 다중 사용자 채팅 서버
@@ -15,6 +17,10 @@ int main(int argc, char **argv) {
   default:
     exit(1);
     break;
+  }
+  if (SSL_library_init() != 1) {
+    perror("SSL_library_init fail");
+    exit(1);
   }
   typedef void (*ServerFunc)();
   void *Handler;
